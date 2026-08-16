@@ -5,20 +5,9 @@ import rl "vendor:raylib"
 on_left_mouse_pressed :: proc(mouse_pos: rl.Vector2) {
 	selected: ^Frame = nil
 	mouse_offset: rl.Vector2
-	for &rect in frames {
-		switch &r in rect.render {
-		case Rect:
-			if rl.CheckCollisionPointRec(mouse_pos, rect.bounds) {
-				selected = &rect
-				mouse_offset = mouse_pos - {rect.bounds.x, rect.bounds.y}
-			}
-		case Texture:
-			if rl.CheckCollisionPointRec(mouse_pos, rect.bounds) {
-				selected = &rect
-				mouse_offset = mouse_pos - {rect.bounds.x, rect.bounds.y}
-			}
-		}
-	}
+	index: int = -1
+	selected, index = get_hovered_frame(mouse_pos)
+	if index != -1 do mouse_offset = {mouse_pos.x - selected.x, mouse_pos.y - selected.y}
 	selection = SelectionData{selected, mouse_offset}
 }
 

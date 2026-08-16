@@ -2,11 +2,6 @@ package main
 
 import rl "vendor:raylib"
 
-RectType :: enum {
-	FILLED,
-	LINE,
-}
-
 SelectionData :: struct {
 	selected: ^Frame,
 	offset:   rl.Vector2,
@@ -20,6 +15,11 @@ Frame :: struct {
 Render :: union {
 	Rect,
 	Texture,
+}
+
+RectType :: enum {
+	FILLED,
+	LINE,
 }
 
 Rect :: struct {
