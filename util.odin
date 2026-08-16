@@ -1,6 +1,5 @@
 package main
 
-import "core:fmt"
 import "core:math"
 import "core:os"
 import rl "vendor:raylib"
@@ -56,4 +55,11 @@ get_clipboard_image :: proc() -> ([]byte, bool) {
 
 	delete(stderr)
 	return stdout, true
+}
+
+get_hovered_frame :: proc(mouse_pos: rl.Vector2) -> (^Frame, int) {
+	#reverse for &frame, index in frames {
+		if rl.CheckCollisionPointRec(mouse_pos, frame) do return &frame, index
+	}
+	return nil, -1
 }

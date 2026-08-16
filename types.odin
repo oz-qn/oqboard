@@ -7,25 +7,28 @@ RectType :: enum {
 	LINE,
 }
 
-RenderObject :: union {
-	RenderRect,
-	RenderTexture,
-}
-
-RenderRect :: struct {
-	using rect: rl.Rectangle,
-	color:      rl.Color,
-	type:       RectType,
-}
-
-RenderTexture :: struct {
-	using rect: rl.Rectangle,
-	src:        rl.Rectangle,
-	texture:    rl.Texture2D,
-	tint:       rl.Color,
-}
-
 SelectionData :: struct {
-	selected: ^RenderObject,
+	selected: ^Frame,
 	offset:   rl.Vector2,
+}
+
+Frame :: struct {
+	using bounds: rl.Rectangle,
+	render:       Render,
+}
+
+Render :: union {
+	Rect,
+	Texture,
+}
+
+Rect :: struct {
+	color: rl.Color,
+	type:  RectType,
+}
+
+Texture :: struct {
+	src:     rl.Rectangle,
+	texture: rl.Texture,
+	tint:    rl.Color,
 }

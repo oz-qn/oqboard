@@ -3,13 +3,13 @@ package main
 import "core:math"
 import rl "vendor:raylib"
 
-rects: [dynamic]RenderObject
+frames: [dynamic]Frame
 selection: SelectionData
 camera: rl.Camera2D
 
 app_init :: proc() {
 	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE})
-	rl.InitWindow(1280, 720, "whiteboard")
+	rl.InitWindow(1280, 720, "oqboard")
 	rl.SetTargetFPS(240)
 
 	camera = rl.Camera2D {
@@ -25,8 +25,13 @@ app_update :: proc() {
 	if rl.IsMouseButtonPressed(.RIGHT) {
 		if rl.IsKeyDown(.LEFT_SHIFT) {
 			pos := to_grid(mouse_pos, 20)
-			new_rect := RenderRect{{pos.x, pos.y, 100, 60}, rl.DARKGRAY, .FILLED}
-			append(&rects, new_rect)
+			new_rect := Frame{{pos.x, pos.y, 100, 60}, Rect{rl.GRAY, .FILLED}}
+			append(&frames, new_rect)
+		}
+		if rl.IsKeyDown(.LEFT_CONTROL) {
+			if hovered, index := get_hovered_frame(mouse_pos); index != -1 {
+				delete_frame(hovered, index)
+			}
 		}
 	}
 
@@ -51,13 +56,11 @@ app_update :: proc() {
 				texture := rl.LoadTextureFromImage(img)
 				src := rl.Rectangle{0, 0, f32(texture.width), f32(texture.height)}
 				pos := to_grid(mouse_pos, 20)
-				new_rect := RenderTexture {
+				new_rect := Frame {
 					{pos.x, pos.y, src.width, src.height},
-					src,
-					texture,
-					rl.WHITE,
+					Texture{src, texture, rl.WHITE},
 				}
-				append(&rects, new_rect)
+				append(&frames, new_rect)
 			}
 		}
 	}
@@ -75,12 +78,12 @@ app_draw :: proc() {
 
 	draw_grid()
 
-	for rect in rects {
-		switch r in rect {
-		case RenderRect:
-			rl.DrawRectangleRec(r.rect, r.color)
-		case RenderTexture:
-			rl.DrawTexturePro(r.texture, r.src, r.rect, {0, 0}, 0, r.tint)
+	for rect in frames {
+		switch r in rect.render {
+		case Rect:
+			rl.DrawRectangleRec(rect.bounds, r.color)
+		case Texture:
+			rl.DrawTexturePro(r.texture, r.src, rect.bounds, {0, 0}, 0, r.tint)
 		}
 	}
 
@@ -89,7 +92,7 @@ app_draw :: proc() {
 }
 
 app_exit :: proc() {
-	delete(rects)
+	delete(frames)
 	rl.CloseWindow()
 }
 
