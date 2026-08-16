@@ -1,6 +1,7 @@
 package main
 
 import "core:fmt"
+import "core:math"
 import rl "vendor:raylib"
 
 rects: [dynamic]RenderRect
@@ -20,6 +21,8 @@ app_init :: proc() {
 
 app_update :: proc() {
 	mouse_pos := rl.GetScreenToWorld2D(rl.GetMousePosition(), camera)
+	camera.offset = rl.GetMousePosition()
+	camera.target = mouse_pos
 
 	if rl.IsMouseButtonPressed(.RIGHT) {
 		if rl.IsKeyDown(.LEFT_SHIFT) {
@@ -30,7 +33,9 @@ app_update :: proc() {
 	}
 
 	if rl.IsMouseButtonDown(.RIGHT) {
-		camera.offset += rl.GetMouseDelta()
+		delta := rl.GetMouseDelta()
+		delta = delta * (-1 / camera.zoom)
+		camera.target += delta
 	}
 
 	if rl.IsMouseButtonPressed(.LEFT) {
@@ -63,7 +68,8 @@ app_update :: proc() {
 	}
 
 	mouse_wheel: f32 = rl.GetMouseWheelMove() * 0.25
-	camera.zoom = max(camera.zoom + mouse_wheel, 0.01)
+	scale := 0.2 * mouse_wheel
+	camera.zoom = math.clamp(math.exp(math.log(camera.zoom, 2.71828) + scale), 0.125, 64)
 }
 
 app_draw :: proc() {

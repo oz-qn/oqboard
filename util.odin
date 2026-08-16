@@ -51,8 +51,6 @@ get_clipboard_image :: proc() -> ([]byte, bool) {
 	)
 
 	if err != os.ERROR_NONE || !state.success {
-		delete(stdout)
-		delete(stderr)
 		return nil, false
 	}
 
