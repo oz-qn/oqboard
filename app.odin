@@ -1,13 +1,11 @@
 package main
 
-import "core:fmt"
 import "core:math"
 import rl "vendor:raylib"
 
-rects: [dynamic]RenderRect
+rects: [dynamic]RenderObject
 selection: SelectionData
 camera: rl.Camera2D
-texture: rl.Texture2D
 
 app_init :: proc() {
 	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE})
@@ -27,7 +25,7 @@ app_update :: proc() {
 	if rl.IsMouseButtonPressed(.RIGHT) {
 		if rl.IsKeyDown(.LEFT_SHIFT) {
 			pos := to_grid(mouse_pos, 20)
-			new_rect := RenderRect{{pos.x, pos.y, 100, 60}, rl.RAYWHITE, .FILLED}
+			new_rect := RenderRect{{pos.x, pos.y, 100, 60}, rl.DARKGRAY, .FILLED}
 			append(&rects, new_rect)
 		}
 	}
@@ -39,30 +37,27 @@ app_update :: proc() {
 	}
 
 	if rl.IsMouseButtonPressed(.LEFT) {
-		selected: ^RenderRect = nil
-		mouse_offset: rl.Vector2
-		for &rect in rects {
-			if rl.CheckCollisionPointRec(mouse_pos, rect) {
-				selected = &rect
-				mouse_offset = mouse_pos - {rect.x, rect.y}
-			}
-		}
-		selection = SelectionData{selected, mouse_offset}
-		fmt.println(selection)
+		on_left_mouse_pressed(mouse_pos)
 	}
 
 	if rl.IsMouseButtonDown(.LEFT) && selection.selected != nil {
-		pos := to_grid(mouse_pos - selection.offset, 20)
-
-		selection.selected.x = pos.x
-		selection.selected.y = pos.y
+		on_left_mouse_held(mouse_pos)
 	}
 
 	if rl.IsKeyPressed(.V) {
 		if rl.IsKeyDown(.LEFT_CONTROL) {
 			if test, ok := get_clipboard_image(); ok {
 				img := rl.LoadImageFromMemory(".png", rawptr(raw_data(test)), i32(len(test)))
-				texture = rl.LoadTextureFromImage(img)
+				texture := rl.LoadTextureFromImage(img)
+				src := rl.Rectangle{0, 0, f32(texture.width), f32(texture.height)}
+				pos := to_grid(mouse_pos, 20)
+				new_rect := RenderTexture {
+					{pos.x, pos.y, src.width, src.height},
+					src,
+					texture,
+					rl.WHITE,
+				}
+				append(&rects, new_rect)
 			}
 		}
 	}
@@ -81,16 +76,13 @@ app_draw :: proc() {
 	draw_grid()
 
 	for rect in rects {
-		switch rect.type {
-		case .LINE:
-			rl.DrawRectangleLinesEx(rect, 3, rect.color)
-		case .FILLED:
-			rl.DrawRectangleRec(rect, rect.color)
-			rl.DrawRectangleLinesEx(rect, 3, rl.GRAY)
+		switch r in rect {
+		case RenderRect:
+			rl.DrawRectangleRec(r.rect, r.color)
+		case RenderTexture:
+			rl.DrawTexturePro(r.texture, r.src, r.rect, {0, 0}, 0, r.tint)
 		}
 	}
-
-	rl.DrawTextureRec(texture, {0, 0, 1280, 720}, {0, 0}, rl.WHITE)
 
 	rl.EndMode2D()
 	rl.EndDrawing()
