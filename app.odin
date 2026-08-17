@@ -1,6 +1,5 @@
 package main
 
-import "core:fmt"
 import "core:math"
 import rl "vendor:raylib"
 
@@ -125,7 +124,7 @@ app_draw :: proc() {
 
 	draw_grid()
 
-	for rect in frames {
+	for &rect in frames {
 		switch r in rect.render {
 		case Rect:
 			rl.DrawRectangleRec(rect.bounds, r.color)

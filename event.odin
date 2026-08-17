@@ -10,4 +10,5 @@ delete_frame :: proc(frame: ^Frame, index: int) {
 	case Rect:
 
 	}
+	selection.selected = nil
 }
