@@ -1,5 +1,6 @@
 package main
 
+import "core:fmt"
 import "core:math"
 import rl "vendor:raylib"
 
@@ -22,6 +23,14 @@ app_update :: proc() {
 	camera.offset = rl.GetMousePosition()
 	camera.target = mouse_pos
 
+	hovered, index := get_hovered_frame(mouse_pos)
+
+	if hovered != nil {
+		rl.SetMouseCursor(.POINTING_HAND)
+	} else {
+		rl.SetMouseCursor(.DEFAULT)
+	}
+
 	if rl.IsMouseButtonPressed(.RIGHT) {
 		if rl.IsKeyDown(.LEFT_SHIFT) {
 			pos := to_grid(mouse_pos, 20)
@@ -29,7 +38,7 @@ app_update :: proc() {
 			append(&frames, new_rect)
 		}
 		if rl.IsKeyDown(.LEFT_CONTROL) {
-			if hovered, index := get_hovered_frame(mouse_pos); index != -1 {
+			if index != -1 {
 				delete_frame(hovered, index)
 			}
 		}
@@ -41,12 +50,50 @@ app_update :: proc() {
 		camera.target += delta
 	}
 
-	if rl.IsMouseButtonPressed(.LEFT) {
-		on_left_mouse_pressed(mouse_pos)
+	if selection_valid(selection) && !rl.IsMouseButtonDown(.LEFT) {
+		selection.selected_edge, selection.edge_found = get_hovered_edge(
+			mouse_pos,
+			selection.selected,
+		)
 	}
 
-	if rl.IsMouseButtonDown(.LEFT) && selection.selected != nil {
-		on_left_mouse_held(mouse_pos)
+	if rl.IsMouseButtonDown(.LEFT) {
+
+		if rl.IsMouseButtonPressed(.LEFT) && !selection.edge_found {
+			offset: rl.Vector2
+			if hovered != nil do offset = {mouse_pos.x - hovered.x, mouse_pos.y - hovered.y}
+			selection = SelectionData{hovered, offset, .NONE, false}
+		}
+
+		if selection_valid(selection) {
+			if selection.edge_found {
+				grid_pos := to_grid(mouse_pos, 20)
+				frame := selection.selected
+				#partial switch selection.selected_edge {
+				case .LEFT:
+					prev := frame.x
+					frame.x = grid_pos.x
+					frame.width += (prev - frame.x)
+				case .RIGHT:
+					frame.width = grid_pos.x - frame.x
+				case .UP:
+					prev := frame.y
+					frame.y = grid_pos.y
+					frame.height += (prev - frame.y)
+				case .DOWN:
+					frame.height = grid_pos.y - frame.y
+				}
+			} else {
+				frame := selection.selected
+				target := to_grid(
+					{mouse_pos.x - selection.offset.x, mouse_pos.y - selection.offset.y},
+					20,
+				)
+				frame.x = target.x
+				frame.y = target.y
+
+			}
+		}
 	}
 
 	if rl.IsKeyPressed(.V) {
@@ -85,6 +132,24 @@ app_draw :: proc() {
 		case Texture:
 			rl.DrawTexturePro(r.texture, r.src, rect.bounds, {0, 0}, 0, r.tint)
 		}
+	}
+
+	if selection.selected != nil {
+		border := selection.selected.bounds
+		border.x -= 3
+		border.y -= 3
+		border.width += 6
+		border.height += 6
+		rl.DrawRectangleLinesEx(border, 3, rl.WHITE)
+	}
+
+	switch selection.selected_edge {
+	case .LEFT, .RIGHT:
+		rl.SetMouseCursor(.RESIZE_EW)
+	case .UP, .DOWN:
+		rl.SetMouseCursor(.RESIZE_NS)
+	case .NONE:
+		rl.SetMouseCursor(.DEFAULT)
 	}
 
 	rl.EndMode2D()

@@ -3,8 +3,10 @@ package main
 import rl "vendor:raylib"
 
 SelectionData :: struct {
-	selected: ^Frame,
-	offset:   rl.Vector2,
+	selected:      ^Frame,
+	offset:        rl.Vector2,
+	selected_edge: EdgeType,
+	edge_found:    bool,
 }
 
 Frame :: struct {
@@ -20,6 +22,14 @@ Render :: union {
 RectType :: enum {
 	FILLED,
 	LINE,
+}
+
+EdgeType :: enum {
+	NONE,
+	LEFT,
+	RIGHT,
+	UP,
+	DOWN,
 }
 
 Rect :: struct {

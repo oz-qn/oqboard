@@ -63,3 +63,27 @@ get_hovered_frame :: proc(mouse_pos: rl.Vector2) -> (^Frame, int) {
 	}
 	return nil, -1
 }
+
+selection_valid :: #force_inline proc(selection: SelectionData) -> bool {
+	return selection.selected != nil
+}
+
+get_hovered_edge :: proc(mouse_pos: rl.Vector2, frame: ^Frame) -> (EdgeType, bool) {
+	top_left := rl.Vector2{frame.x, frame.y}
+	top_right := rl.Vector2{frame.x + frame.width, frame.y}
+	bottom_left := rl.Vector2{frame.x, frame.y + frame.height}
+	bottom_right := rl.Vector2{frame.x + frame.width, frame.y + frame.height}
+
+	switch {
+	case rl.CheckCollisionPointLine(mouse_pos, top_left, bottom_left, 5):
+		return .LEFT, true
+	case rl.CheckCollisionPointLine(mouse_pos, top_left, top_right, 5):
+		return .UP, true
+	case rl.CheckCollisionPointLine(mouse_pos, top_right, bottom_right, 5):
+		return .RIGHT, true
+	case rl.CheckCollisionPointLine(mouse_pos, bottom_left, bottom_right, 5):
+		return .DOWN, true
+	case:
+		return .NONE, false
+	}
+}
