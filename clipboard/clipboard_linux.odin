@@ -12,21 +12,6 @@ Backend :: enum u8 {
 
 backend: Backend
 
-print_clipboard_type :: proc() {
-	state, stdout, stderr, err := os.process_exec(
-		os.Process_Desc{command = []string{"wl-paste", "--list-types"}},
-		context.temp_allocator,
-	)
-
-	if err != os.ERROR_NONE || !state.success {
-		delete(stdout)
-		delete(stderr)
-	}
-
-	fmt.println(string(stdout))
-	delete(stderr)
-}
-
 get_linux :: proc() -> (Data, bool) {
 	if backend == nil {
 		found: bool
