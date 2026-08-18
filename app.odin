@@ -1,16 +1,21 @@
 package main
 
+import "core:fmt"
 import "core:math"
+import "core:strings"
 import rl "vendor:raylib"
 
 frames: [dynamic]Frame
 selection: SelectionData
 camera: rl.Camera2D
+is_hovering: bool = false
 
 app_init :: proc() {
 	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE})
 	rl.InitWindow(1280, 720, "oqboard")
 	rl.SetTargetFPS(240)
+	rl.GuiEnable()
+	rl.GuiUnlock()
 
 	camera = rl.Camera2D {
 		zoom = 1,
@@ -23,27 +28,31 @@ app_update :: proc() {
 	camera.target = mouse_pos
 
 	hovered, index := get_hovered_frame(mouse_pos)
+	is_hovering = index != -1
 
-	if hovered != nil {
+	if is_hovering {
 		rl.SetMouseCursor(.POINTING_HAND)
 	} else {
 		rl.SetMouseCursor(.DEFAULT)
 	}
 
-	if rl.IsMouseButtonPressed(.RIGHT) {
-		if rl.IsKeyDown(.LEFT_SHIFT) {
-			pos := to_grid(mouse_pos, 20)
-			new_rect := Frame{{pos.x, pos.y, 100, 60}, Rect{rl.GRAY, .FILLED}}
-			append(&frames, new_rect)
-		}
-		if rl.IsKeyDown(.LEFT_CONTROL) {
-			if index != -1 {
-				delete_frame(hovered, index)
-			}
-		}
-	}
 
 	if rl.IsMouseButtonDown(.RIGHT) {
+		if rl.IsMouseButtonPressed(.RIGHT) {
+			if rl.IsKeyDown(.LEFT_SHIFT) {
+				pos := to_grid(mouse_pos, 20)
+				new_rect := Frame {
+					{pos.x, pos.y, 100, 60},
+					Text{"lorem ipsum dolor samet.", rl.WHITE},
+				}
+				append(&frames, new_rect)
+			}
+			if rl.IsKeyDown(.LEFT_CONTROL) {
+				if index != -1 {
+					delete_frame(hovered, index)
+				}
+			}
+		}
 		delta := rl.GetMouseDelta()
 		delta = delta * (-1 / camera.zoom)
 		camera.target += delta
@@ -97,17 +106,18 @@ app_update :: proc() {
 
 	if rl.IsKeyPressed(.V) {
 		if rl.IsKeyDown(.LEFT_CONTROL) {
-			if test, ok := get_clipboard_image(); ok {
-				img := rl.LoadImageFromMemory(".png", rawptr(raw_data(test)), i32(len(test)))
-				texture := rl.LoadTextureFromImage(img)
-				src := rl.Rectangle{0, 0, f32(texture.width), f32(texture.height)}
-				pos := to_grid(mouse_pos, 20)
-				new_rect := Frame {
-					{pos.x, pos.y, src.width, src.height},
-					Texture{src, texture, rl.WHITE},
-				}
-				append(&frames, new_rect)
-			}
+			fmt.println(get_clipboard_data())
+			// if test, ok := get_clipboard_image(); ok {
+			// 	img := rl.LoadImageFromMemory(".png", rawptr(raw_data(test)), i32(len(test)))
+			// 	texture := rl.LoadTextureFromImage(img)
+			// 	src := rl.Rectangle{0, 0, f32(texture.width), f32(texture.height)}
+			// 	pos := to_grid(mouse_pos, 20)
+			// 	new_rect := Frame {
+			// 		{pos.x, pos.y, src.width, src.height},
+			// 		Texture{src, texture, rl.WHITE},
+			// 	}
+			// 	append(&frames, new_rect)
+			// }
 		}
 	}
 
@@ -130,6 +140,9 @@ app_draw :: proc() {
 			rl.DrawRectangleRec(rect.bounds, r.color)
 		case Texture:
 			rl.DrawTexturePro(r.texture, r.src, rect.bounds, {0, 0}, 0, r.tint)
+		case Text:
+			rl.DrawRectangleRec(rect, {0, 0, 0, 120})
+			draw_text_wrapped(r.text, rect, rl.GetFontDefault(), 20, 2, 10)
 		}
 	}
 
@@ -142,14 +155,7 @@ app_draw :: proc() {
 		rl.DrawRectangleLinesEx(border, 3, rl.WHITE)
 	}
 
-	switch selection.selected_edge {
-	case .LEFT, .RIGHT:
-		rl.SetMouseCursor(.RESIZE_EW)
-	case .UP, .DOWN:
-		rl.SetMouseCursor(.RESIZE_NS)
-	case .NONE:
-		rl.SetMouseCursor(.DEFAULT)
-	}
+	update_cursor()
 
 	rl.EndMode2D()
 	rl.EndDrawing()

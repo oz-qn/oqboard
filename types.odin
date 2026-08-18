@@ -17,6 +17,7 @@ Frame :: struct {
 Render :: union {
 	Rect,
 	Texture,
+	Text,
 }
 
 RectType :: enum {
@@ -41,4 +42,9 @@ Texture :: struct {
 	src:     rl.Rectangle,
 	texture: rl.Texture,
 	tint:    rl.Color,
+}
+
+Text :: struct {
+	text:  string,
+	color: rl.Color,
 }

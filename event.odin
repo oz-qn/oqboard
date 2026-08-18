@@ -9,6 +9,8 @@ delete_frame :: proc(frame: ^Frame, index: int) {
 		rl.UnloadTexture(type.texture)
 	case Rect:
 
+	case Text:
+
 	}
 	selection.selected = nil
 }
