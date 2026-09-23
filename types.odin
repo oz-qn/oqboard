@@ -47,4 +47,5 @@ Texture :: struct {
 Text :: struct {
 	text:  string,
 	color: rl.Color,
+	size:  f32,
 }

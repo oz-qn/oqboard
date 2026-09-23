@@ -2,20 +2,25 @@ package main
 
 import "core:fmt"
 import "core:math"
-import "core:strings"
 import rl "vendor:raylib"
+
+editor: Editor
 
 frames: [dynamic]Frame
 selection: SelectionData
 camera: rl.Camera2D
 is_hovering: bool = false
+font: rl.Font
 
 app_init :: proc() {
 	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE})
 	rl.InitWindow(1280, 720, "oqboard")
-	rl.SetTargetFPS(240)
-	rl.GuiEnable()
-	rl.GuiUnlock()
+	rl.SetTargetFPS(rl.GetMonitorRefreshRate(rl.GetCurrentMonitor()))
+
+	editor_init(&editor, SelectState{})
+
+	font = rl.LoadFontEx("resources/Iosevka-Term-Extended.ttf", 96, nil, 0)
+	rl.SetTextureFilter(font.texture, .TRILINEAR)
 
 	camera = rl.Camera2D {
 		zoom = 1,
@@ -23,107 +28,11 @@ app_init :: proc() {
 }
 
 app_update :: proc() {
-	mouse_pos := rl.GetScreenToWorld2D(rl.GetMousePosition(), camera)
-	camera.offset = rl.GetMousePosition()
-	camera.target = mouse_pos
-
-	hovered, index := get_hovered_frame(mouse_pos)
-	is_hovering = index != -1
-
-	if is_hovering {
-		rl.SetMouseCursor(.POINTING_HAND)
-	} else {
-		rl.SetMouseCursor(.DEFAULT)
-	}
-
-
-	if rl.IsMouseButtonDown(.RIGHT) {
-		if rl.IsMouseButtonPressed(.RIGHT) {
-			if rl.IsKeyDown(.LEFT_SHIFT) {
-				pos := to_grid(mouse_pos, 20)
-				new_rect := Frame {
-					{pos.x, pos.y, 100, 60},
-					Text{"lorem ipsum dolor samet.", rl.WHITE},
-				}
-				append(&frames, new_rect)
-			}
-			if rl.IsKeyDown(.LEFT_CONTROL) {
-				if index != -1 {
-					delete_frame(hovered, index)
-				}
-			}
-		}
-		delta := rl.GetMouseDelta()
-		delta = delta * (-1 / camera.zoom)
-		camera.target += delta
-	}
-
-	if selection_valid(selection) && !rl.IsMouseButtonDown(.LEFT) {
-		selection.selected_edge, selection.edge_found = get_hovered_edge(
-			mouse_pos,
-			selection.selected,
-		)
-	}
-
-	if rl.IsMouseButtonDown(.LEFT) {
-
-		if rl.IsMouseButtonPressed(.LEFT) && !selection.edge_found {
-			offset: rl.Vector2
-			if hovered != nil do offset = {mouse_pos.x - hovered.x, mouse_pos.y - hovered.y}
-			selection = SelectionData{hovered, offset, .NONE, false}
-		}
-
-		if selection_valid(selection) {
-			if selection.edge_found {
-				grid_pos := to_grid(mouse_pos, 20)
-				frame := selection.selected
-				#partial switch selection.selected_edge {
-				case .LEFT:
-					prev := frame.x
-					frame.x = grid_pos.x
-					frame.width += (prev - frame.x)
-				case .RIGHT:
-					frame.width = grid_pos.x - frame.x
-				case .UP:
-					prev := frame.y
-					frame.y = grid_pos.y
-					frame.height += (prev - frame.y)
-				case .DOWN:
-					frame.height = grid_pos.y - frame.y
-				}
-			} else {
-				frame := selection.selected
-				target := to_grid(
-					{mouse_pos.x - selection.offset.x, mouse_pos.y - selection.offset.y},
-					20,
-				)
-				frame.x = target.x
-				frame.y = target.y
-
-			}
-		}
-	}
-
-	if rl.IsKeyPressed(.V) {
-		if rl.IsKeyDown(.LEFT_CONTROL) {
-			fmt.println(get_clipboard_data())
-			// if test, ok := get_clipboard_image(); ok {
-			// 	img := rl.LoadImageFromMemory(".png", rawptr(raw_data(test)), i32(len(test)))
-			// 	texture := rl.LoadTextureFromImage(img)
-			// 	src := rl.Rectangle{0, 0, f32(texture.width), f32(texture.height)}
-			// 	pos := to_grid(mouse_pos, 20)
-			// 	new_rect := Frame {
-			// 		{pos.x, pos.y, src.width, src.height},
-			// 		Texture{src, texture, rl.WHITE},
-			// 	}
-			// 	append(&frames, new_rect)
-			// }
-		}
-	}
-
 	mouse_wheel: f32 = rl.GetMouseWheelMove() * 0.25
 	scale := 0.2 * mouse_wheel
 	camera.zoom = math.clamp(math.exp(math.log(camera.zoom, 2.71828) + scale), 0.125, 64)
+
+	editor_update(&editor)
 }
 
 app_draw :: proc() {
@@ -142,7 +51,7 @@ app_draw :: proc() {
 			rl.DrawTexturePro(r.texture, r.src, rect.bounds, {0, 0}, 0, r.tint)
 		case Text:
 			rl.DrawRectangleRec(rect, {0, 0, 0, 120})
-			draw_text_wrapped(r.text, rect, rl.GetFontDefault(), 20, 2, 10)
+			draw_text_wrapped(r.text, rect, font, r.size, 2, 10)
 		}
 	}
 
@@ -158,6 +67,8 @@ app_draw :: proc() {
 	update_cursor()
 
 	rl.EndMode2D()
+	text := fmt.ctprintf("fps: {}", rl.GetFPS())
+	rl.DrawText(text, 10, 10, 40, rl.RAYWHITE)
 	rl.EndDrawing()
 }
 

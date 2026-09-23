@@ -96,16 +96,34 @@ get_hovered_edge :: proc(mouse_pos: rl.Vector2, frame: ^Frame) -> (EdgeType, boo
 }
 
 update_cursor :: proc() {
-	switch selection.selected_edge {
-	case .LEFT, .RIGHT:
-		rl.SetMouseCursor(.RESIZE_EW)
-	case .UP, .DOWN:
-		rl.SetMouseCursor(.RESIZE_NS)
-	case .NONE:
-		rl.SetMouseCursor(.POINTING_HAND if is_hovering else .DEFAULT)
+	switch state in editor.state {
+	case SelectState:
+		switch selection.selected_edge {
+		case .LEFT, .RIGHT:
+			rl.SetMouseCursor(.RESIZE_EW)
+		case .UP, .DOWN:
+			rl.SetMouseCursor(.RESIZE_NS)
+		case .NONE:
+			rl.SetMouseCursor(.POINTING_HAND if is_hovering else .DEFAULT)
+		}
+	case TextEditState:
+		rl.SetMouseCursor(.DEFAULT)
 	}
+
 }
 
+delete_frame :: proc(frame: ^Frame, index: int) {
+	switch type in frame.render {
+	case Texture:
+		rl.UnloadTexture(type.texture)
+	case Rect:
+
+	case Text:
+
+	}
+	unordered_remove(&frames, index)
+	selection.selected = nil
+}
 @(private = "file")
 TextState :: enum u8 {
 	MEASURE_STATE,
